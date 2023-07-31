@@ -6,6 +6,10 @@ xor ax, ax
 mov es, ax
 mov [diskNum], dl
 
+mov ah, 0x0e
+mov al, 'A'
+int 0x10
+
 ; read drive geometry
 
 mov ah, 8
@@ -15,9 +19,17 @@ mov [number_heads], dh
 and cl, 0x3f
 mov [sectors_per_track], cl
 
+mov ah, 0x0e
+mov al, 'B'
+int 0x10
+
 ; find the kernel image
 mov si, filename
 call ustar_seek
+
+mov ah, 0x0e
+mov al, 'C'
+int 0x10
 
 ; load the kernel image
 push bx
@@ -26,7 +38,8 @@ call loadsector_lba
 
 ; boot the kernel image
 
-mov ax, 0x0E43
+mov ah, 0x0e
+mov al, 'D'
 int 0x10
 
 jmp $
