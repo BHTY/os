@@ -110,6 +110,14 @@ ustar_seek:
 		; increment
 		add ax, bx
 
+		mov dx, ax
+
+mov ah, 0x0e
+mov al, 'F'
+int 0x10
+
+		mov ax, dx
+
 		jmp ustar_seek_loop
 		
 	ustar_seek_exit:
