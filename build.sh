@@ -1,4 +1,13 @@
 cd boot
 ./build.sh
 cd ..
-cat boot/boot.bin hd.tar > os.bin
+
+cd kernel
+./build.sh
+cd ..
+
+cd hdd
+./build.sh
+cd ..
+
+cat boot/boot.bin hdd/hd.tar > os.bin

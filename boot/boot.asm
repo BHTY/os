@@ -4,11 +4,9 @@
 
 xor ax, ax
 mov es, ax
+mov ax, cs
+mov ds, ax
 mov [diskNum], dl
-
-mov ah, 0x0e
-mov al, 'A'
-int 0x10
 
 ; read drive geometry
 
@@ -19,30 +17,24 @@ mov [number_heads], dh
 and cl, 0x3f
 mov [sectors_per_track], cl
 
-mov ah, 0x0e
-mov al, 'B'
-int 0x10
-
 ; find the kernel image
 mov si, filename
 call ustar_seek
-
-mov ah, 0x0e
-mov al, 'C'
-int 0x10
 
 ; load the kernel image
 push bx
 push ax
 call loadsector_lba
 
-; boot the kernel image
+; jump into the stage 1.5 bootloader (i.e. pmode entry stub) to reach protected mode
+push 0x7E00
+push 0x00
+push 0x0002
+push 0x01
 
-mov ah, 0x0e
-mov al, 'D'
-int 0x10
+call loadsector
 
-jmp $
+jmp 0x0000:0x7E00
 
 loadsector_lba: ;this function takes an LBA address off the stack, converts it to CHS, then loads it
 	mov BP, SP
@@ -64,6 +56,8 @@ loadsector_lba: ;this function takes an LBA address off the stack, converts it t
 	push WORD [BP+0x04] ; push # of sectors to read
 
 	call loadsector
+
+	add SP, 8
 	ret
 
 loadsector: ;this function reads a sector off of the disk
@@ -92,19 +86,23 @@ ustar_seek:
 		push 0x01 ;only reading 1 sector
 		push ax ;push it again as an arg
 		call loadsector_lba
+
+		add SP, 4
 		pop ax
 
 		; determine filesize
 		call get_size
-
+		
 		; compare to filename we're seeking for
 			push si ;push it once to save
 			push WORD [filename_len]
 			push KERNEL_LOCATION
 			push si
 			call memcmp
+			add SP, 6
+			pop si
 		; 	if the names are equal, return
-		cmp cl, 0
+		cmp cl, 1
 		je ustar_seek_exit
 
 		; increment
@@ -113,6 +111,7 @@ ustar_seek:
 		jmp ustar_seek_loop
 		
 	ustar_seek_exit:
+		add ax, 1
 		ret
 
 ; BP+2=ptr1 (DS:SI) - this is the one from this sector
@@ -121,10 +120,33 @@ ustar_seek:
 ; Result in CL
 
 memcmp:
+	mov BP, SP
+
+	mov dx, ax
+	mov di, WORD [BP+0x04]
+	mov cx, WORD [BP+0x06]
+memcmp_loop:
+	mov ah, 0x0e
+	mov al, BYTE [es:di]
+	int 0x10
+	inc di
+	dec cx
+	cmp cx, 0
+	jne memcmp_loop
+
+	mov ah, 0x0e
+	mov al, 0xa
+	int 0x10
+	mov ah, 0x0e
+	mov al, 0xd
+	int 0x10
+
+	mov ax, dx
+
 	mov si, WORD [BP+0x02]
 	mov di, WORD [BP+0x04]
 	mov cx, WORD [BP+0x06]
-	rep cmpsb
+	repe cmpsb
 	sete cl
 	ret
 
@@ -137,11 +159,13 @@ get_size:
 	mov cl, 12
 	mov di, 0x107c
 	xor bx, bx
+	xor dx, dx
 
 	get_size_loop:
 		shl bx, 3
 		mov dl, BYTE [es:di]
 		sub dl, 48
+		add bx, dx
 		inc di
 		dec cl
 		cmp cl, 0
@@ -166,6 +190,5 @@ filename_len: dw 10
 
 times 510-($-$$) db 0
 db 0x55, 0xaa
-times 512 db 0
 
 KERNEL_LOCATION equ 0x1000
