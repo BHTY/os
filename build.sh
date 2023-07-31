@@ -1,4 +1,4 @@
 cd boot
 ./build.sh
 cd ..
-cp boot/boot.bin os.bin
+cat boot/boot.bin hd0.tar > os.bin
