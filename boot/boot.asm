@@ -4,7 +4,6 @@
 
 xor ax, ax
 mov es, ax
-mov ds, cs
 mov [diskNum], dl
 
 ; read drive geometry
@@ -84,7 +83,7 @@ ustar_seek:
 
 		; compare to filename we're seeking for
 			push si ;push it once to save
-			push [filename_len]
+			push WORD [filename_len]
 			push 0x1101
 			push si
 			call memcmp
