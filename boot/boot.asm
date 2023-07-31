@@ -14,7 +14,7 @@ int 0x10
 
 mov ah, 8
 int 0x13 ; DH = # of heads - 1, CL & 0x3F = sectors per track
-dec dh
+inc dh
 mov [number_heads], dh
 and cl, 0x3f
 mov [sectors_per_track], cl
@@ -87,24 +87,12 @@ ustar_seek:
 	mov ax, 2
 
 	ustar_seek_loop:
-		mov dx, ax	
-		mov ah, 0x0e
-		mov al, 'M'
-		int 0x10
-		mov ax, dx
-
 		; load sector
 		push ax ;push it once to save it
 		push 0x01 ;only reading 1 sector
 		push ax ;push it again as an arg
 		call loadsector_lba
 		pop ax
-
-		mov dx, ax
-		mov ah, 0x0e
-		mov al, 'S'
-		int 0x10
-		mov ax, dx
 
 		; determine filesize
 		call get_size
