@@ -100,7 +100,7 @@ ustar_seek:
 		; compare to filename we're seeking for
 			push si ;push it once to save
 			push WORD [filename_len]
-			push 0x1101
+			push KERNEL_LOCATION
 			push si
 			call memcmp
 		; 	if the names are equal, return
