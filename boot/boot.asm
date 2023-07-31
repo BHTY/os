@@ -87,12 +87,24 @@ ustar_seek:
 	mov ax, 2
 
 	ustar_seek_loop:
+		mov dx, ax	
+		mov ah, 0x0e
+		mov al, 'M'
+		int 0x10
+		mov ax, dx
+
 		; load sector
 		push ax ;push it once to save it
 		push 0x01 ;only reading 1 sector
 		push ax ;push it again as an arg
 		call loadsector_lba
 		pop ax
+
+		mov dx, ax
+		mov ah, 0x0e
+		mov al, 'S'
+		int 0x10
+		mov ax, dx
 
 		; determine filesize
 		call get_size
@@ -109,14 +121,6 @@ ustar_seek:
 
 		; increment
 		add ax, bx
-
-		mov dx, ax
-
-mov ah, 0x0e
-mov al, 'F'
-int 0x10
-
-		mov ax, dx
 
 		jmp ustar_seek_loop
 		
