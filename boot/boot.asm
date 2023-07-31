@@ -166,5 +166,6 @@ filename_len: dw 10
 
 times 510-($-$$) db 0
 db 0x55, 0xaa
+times 512 db 0
 
 KERNEL_LOCATION equ 0x1000
