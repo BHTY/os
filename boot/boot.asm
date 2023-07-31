@@ -26,6 +26,9 @@ call loadsector_lba
 
 ; boot the kernel image
 
+mov ax, 0x0E43
+int 0x10
+
 jmp $
 
 loadsector_lba: ;this function takes an LBA address off the stack, converts it to CHS, then loads it
