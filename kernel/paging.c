@@ -9,6 +9,7 @@
 uint8_t free_pages[NUM_PAGES];
 
 void init_paging(){
+	//memset(dir, 0, sizeof(page_directory));
 	memset(free_pages, 0, NUM_PAGES);
 	memset(MEMORY_BASE, 0, MEMORY_SIZE);
 }

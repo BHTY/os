@@ -1,6 +1,7 @@
 #include "term.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include "../crt/string.h"
 #include "../crt/printf.h"
 #include "../io.h"
@@ -84,13 +85,4 @@ void kputs(const char* str){
 }
 
 int kprintf(const char* fmt, ...){
-	char buf[1024];
-	va_list args;
-	int i;
-	va_start(args, fmt);
-	i = vsprintf(buf, fmt, args);
-	va_end(args);
-	buf[i] = '\0';
-	kputs(buf);
-	return i;
 }
