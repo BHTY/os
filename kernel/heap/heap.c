@@ -65,8 +65,7 @@ void *malloc(size_t sz){
 			
 			else if(curBlock->next == 0){ //but it is the last block so it's the best we've got
 				int needed_bytes = sz + 32 - curBlock->size; //this is the # of bytes by which we need to extend the heap
-				needed_bytes = align(needed_bytes, 4096);
-				int needed_pages = needed_bytes / 4096;
+				int needed_pages = align(needed_bytes, 4096) / 4096;
 				
 				//grow the heap
 				for(int i = 0; i < needed_pages; i++){
@@ -80,7 +79,7 @@ void *malloc(size_t sz){
 				nextBlock = curBlock->next;
 				nextBlock->used = 0;
 				nextBlock->prev = curBlock;
-				nextBlock->size = needed_bytes; //???
+				nextBlock->size = 4096 - (16 + needed_bytes % 4096); //???
 				nextBlock->next = 0;
 				
 				break;				
