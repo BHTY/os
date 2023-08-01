@@ -1,11 +1,10 @@
 #include <stdint.h>
 #include "idt.h"
+#include "io.h"
 
 __attribute__((aligned(0x10))) static idt_entry_t idt[256];
 
 static idtr_t idtr;
-
-#define io_write_8(port, data) __asm__ volatile("outb %1, %0" : : "dN" ((uint16_t)port), "a" ((uint8_t)(data)))
 
 __attribute__((noreturn)) void exception_handler(int code){
 	if(code != 8){
