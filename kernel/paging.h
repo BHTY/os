@@ -15,7 +15,7 @@ void enable_paging();
 void set_page_tables(uint32_t);
 
 //allocates and frees pages in physical memory
-void* allocate_page();
+void* alloc_page();
 void free_page(void*);
 
 //maps physical addresses to virtual addresses

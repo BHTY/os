@@ -13,7 +13,7 @@ void init_paging(){
 	memset(MEMORY_BASE, 0, MEMORY_SIZE);
 }
 
-void* allocate_page(){
+void* alloc_page(){
 	for(int i = 0; i < NUM_PAGES; i++){
 		if(free_pages[i] == 0){
 			free_pages[i] = 1;
@@ -37,7 +37,7 @@ int mmap(page_directory* dir, void* vaddr, void* paddr){
 	uint32_t pt_entry = (uint32_t)(vaddr) >> 12 & 0x3FF; //entry into pagetable
 	
 	if(dir->entries[pd_entry] == 0){ //the virtual address points to an invalid pagetable
-		dir->entries[pd_entry] = (uint32_t)(allocate_page()) | 7;
+		dir->entries[pd_entry] = (uint32_t)(alloc_page()) | 7;
 	}
 	
 	page_table* table = dir->entries[pd_entry] & 0xfffff000;

@@ -7,13 +7,10 @@ __attribute__((aligned(0x10))) static idt_entry_t idt[256];
 static idtr_t idtr;
 
 __attribute__((noreturn)) void exception_handler(int code){
-	if(code != 8){
-
 	*(unsigned char*)(0xB8002) = code + 48;
 	*(unsigned char*)(0xB8003) = *(unsigned char*)(0xB8003) + 1;
 	io_write_8(0xA0, 0x20);
 	io_write_8(0x20, 0x20);
-	}
 	
 	//__asm__ volatile("cli; hlt");
 	//__asm__ volatile("cli");

@@ -17,4 +17,4 @@ i386-elf-gcc -ffreestanding -m32 -g -c "io.c" -o "io.o"
 nasm "paging.asm" -f elf -o "paging_asm.o"
 nasm "idt.asm" -f elf -o "idt_asm.o"
 nasm "kernel_entry.asm" -f elf -o "kernel_entry.o"
-i386-elf-ld -o "kernel.bin" -Ttext 0x1000 "kernel_entry.o" "io.o" "heap/heap.o" "crt/crt.o" "kernel.o" "paging.o" "paging_asm.o" "idt.o" "idt_asm.o" --oformat binary
+i386-elf-ld -o "kernel.bin" -Ttext 0x1000 "kernel_entry.o" "io.o" "heap/heap.o" "crt/crt.o" "kernel.o" "paging.o" "paging_asm.o" "idt.o" "idt_asm.o" "term/term.o" --oformat binary

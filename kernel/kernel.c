@@ -20,12 +20,11 @@ void kmain(){
 	enable_paging();
 	
 	idt_init();
-	test();
+	
+	while(1);
 	
 	while(1){
 		*(unsigned char*)(0xB8000) = *(unsigned char*)(0xB8000)+1;
 		*(unsigned char*)(0x100001) = *(unsigned char*)(0x100001)+1;
 	}
-	
-	while(1);
 }

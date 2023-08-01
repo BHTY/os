@@ -23,7 +23,7 @@ void init_heap(){
 	temp.prev = 0;
 	temp.next = 0;	
 	heapSize = 4096;
-	mmap(&pagedir, heapStart, allocate_page());
+	mmap(&pagedir, heapStart, alloc_page());
 	memcpy(heapStart, &temp, sizeof(MemBlock));
 }
 
@@ -70,7 +70,7 @@ void *malloc(size_t sz){
 				
 				//grow the heap
 				for(int i = 0; i < needed_pages; i++){
-					mmap(&pagedir, heapStart + heapSize, allocate_page());
+					mmap(&pagedir, heapStart + heapSize, alloc_page());
 					heapSize += 4096;
 				}
 				
