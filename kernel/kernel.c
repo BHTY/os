@@ -8,7 +8,9 @@ Written by Will Klees (c) 2023
 #include "idt.h" 
 #include "paging.h"
 
+int p = 0xDEADBEEF;
 page_directory pagedir;
+int i = 0xDEADBEEF;
 
 void test();
 
