@@ -8,19 +8,23 @@ Written by Will Klees (c) 2023
 #include "idt.h" 
 #include "paging.h"
 
-page_directory* pagedir;
+page_directory pagedir;
+
+void test();
 
 void kmain(){
-	pagedir = allocate_page();
-
 	init_paging();
-	identity_map(pagedir);
-	set_page_tables(pagedir);
+	identity_map(&pagedir);
+	mmap(&pagedir, 0x100000, 0xB8000);
+	set_page_tables(&pagedir);
 	enable_paging();
+	
+	idt_init();
+	test();
 	
 	while(1){
 		*(unsigned char*)(0xB8000) = *(unsigned char*)(0xB8000)+1;
-		//*(unsigned char*)(0x100001) = *(unsigned char*)(0x100001)+1;
+		*(unsigned char*)(0x100001) = *(unsigned char*)(0x100001)+1;
 	}
 	
 	while(1);

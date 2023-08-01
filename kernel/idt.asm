@@ -1,21 +1,18 @@
 %macro isr_err_stub 1
 isr_stub_%+%1:
+	push %1
 	call exception_handler
+	add esp, 4
 	iret
 %endmacro
 
 %macro isr_no_err_stub 1
 isr_stub_%+%1:
+	push %1
 	call exception_handler
+	add esp, 4
 	iret
 %endmacro
-
-isr_stub_8:
-	call exception_handler
-	cli
-	inc BYTE [0xB8001]
-	sti
-	iret
 
 extern exception_handler
 isr_no_err_stub 0
@@ -26,6 +23,7 @@ isr_no_err_stub 4
 isr_no_err_stub 5
 isr_no_err_stub 6
 isr_no_err_stub 7
+isr_no_err_stub 8
 isr_no_err_stub 9
 isr_err_stub    10
 isr_err_stub    11

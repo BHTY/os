@@ -1,5 +1,6 @@
 extern enable_paging
 extern set_page_tables
+extern test
 
 enable_paging:
 	mov eax, cr0
@@ -13,4 +14,8 @@ set_page_tables:
 	mov eax, [ebp + 8]
 	mov cr3, eax
 	pop ebp
+	ret
+
+test:
+	int 0x4
 	ret

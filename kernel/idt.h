@@ -17,6 +17,6 @@ typedef struct{
 
 extern void* isr_stub_table[];
 
-__attribute__((noreturn)) void exception_handler(void);
+__attribute__((noreturn)) void exception_handler(int code);
 void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags);
 void idt_init(void);
