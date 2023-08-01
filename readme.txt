@@ -333,4 +333,84 @@ terminals, meaning that you cannot switch them into the foreground. However, the
 terminal programs that can establish an IPC connection to compatible background applications, who
 will send messages to the "listening" terminal app in order to print diagnostic text.
 
-There should be a delineation between kernel messages and user messages
+the whole "faking a terminal operation" seems a little sketch, it would be nice if there's some 
+cleaner way to handle that inside of the calling context
+
+There should be a delineation between kernel messages and user messages?
+
+Similar to Microsoft Windows, the socket API, while based on BSD sockets, does not use file 
+descriptors to represent sockets (nor does it use file operations to operate on them). 
+However, it would certainly be possible for a virtual filesystem device driver to emulate
+this behavior and talk to the underlying TCP/IP stack.
+
+
+
+THE VIRTUAL STDIO FILESYSTEM DRIVER
+As mentioned earlier, the virtual stdio device driver exists purely to provide access to the
+standard C I/O streams including stdout, stdin, and stderr. As such, there is no BLDD for it
+to talk to - its logic is entirely internal. 
+
+There are actually certain respects in which this is not dissimilar from the driver for a
+mounted network share, which is another filesystem device that doesn't work with traditional
+sectors or blocks on a disk directly representing the data. Instead, the mapped network drive's
+driver would forward any file requests over the network and return the results without talking
+to any BLDD.
+
+Back to the virtual stdio filesystem driver, due to its use case, there are certain file
+operations that are unimplemented and will return an error to the program if they are
+attempted. For example, all of the "file management" functions (including fs_rename, 
+fs_mkdir, fs_delete, and fs_getfileinfo) are unsupported.
+
+Functions that involve manipulating the filesystem, including fs_rename, fs_mkdir, and
+fs_delete will simply do nothing but raise an error, while fs_getfileinfo will return
+a dummy value for application compatibility.
+
+Directory content management is supported (made simpler by the fact that there are no
+subdirectories in the stdio filesystem), meaning that an application can enumerate over
+the device files. 
+
+All of the core file operations are also of course supported, though some of them will
+have strange or unexpected behavior due to the nature of the files that they are 
+operating on. For example, fs_getpos() will always return 0, while fs_setpos() will
+essentially do nothing. Due to the nature of the function, it only works on disk files
+or something similar enough to behave as one.
+
+
+GRAPHICAL USER INTERFACE
+Creating a window manager would not be difficult on such an environment, assuming APIs
+were added to facilitate enabling a bitmapped graphics mode. Such a window manager would
+run as a user process alongside all of the others, maintaining its own data structure
+of all of the windows. With exclusive control of the keyboard, mouse, and display
+devices, any applications requesting to, for example, issue a drawing command, would
+simply use IPC to send that message to the window system, which would then fulfill it.
+
+Shared memory would allow the window manager and other processes to share bitmaps.
+
+One major advancement that a window manager would allow is multiple terminals onscreen
+at once, since a new terminal emulator driver could be written that draws into a 
+window. Potential future features for the terminal emulator include differently-sized
+buffers for both the screen and the stored text.
+
+
+MEMORY-MAPPED FILES
+
+- maintaining buffers in RAM (flush to disk)
+- disk caching
+
+
+
+MULTITERM
+MultiTerm is yet another terminal emulator provided on the system, allowing you to 
+manage the size and placement of multiple onscreen terminals simultaneously through
+a pseudo-GUI. Itself being a client of the physical console, it uses OS hooks to
+treat any applications that are "joined" to it as background processes without
+their own terminals so that the Task Switcher treats them all as part of 
+MultiTerm. 
+
+You can run multiple instances of MultiTerm simultaneously, each of which allows you
+to "attach" an application to MultiTerm. Different key combinations are used to
+cycle through the current MultiTerm application in charge of the screen, and you
+use console commands to control the arrangement of the terminals. Through various
+shortcuts, they can float, or you can tile them. For example, you could tile three
+terminals into a 40x25 terminal on the right, 20x13 on the top-left, and 20x12 on the
+bottom left.
