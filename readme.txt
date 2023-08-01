@@ -152,11 +152,75 @@ action as killing it through the Task Manager. Killing an application performs a
 - Freeing its page directory and page tables
 - Deleting all associated threads
 
+
 DEBUGGER
-Breakpoints
-Pausing execution
-Single stepping
-Register & stack dumps
+- Breakpoints
+- Pausing execution
+- Single stepping
+- Register & stack dumps
+
+A basic debugging system is supported that allows for a user to debug any potentially errant
+applications on their machine. First of all, the debugger is capable of running "on top" of a 
+program. It does this by installing a terminal emulator driver of its own which the debuggee is
+connected to, while the debugger itself, which communicates to its special driver, has control of
+the physical terminal (while it's foregrounded). 
+
+This allows the terminal to intercept certain keypresses, including hotkeys that may bring up
+register dumps or certain menus. The debuggers main facilities include allowing breakpoints to be
+set at certain addresses, which will replace the instruction there with an interrupt, which causes
+an exception which will cause the app to be paused, as well as pausing execution. The debugger can
+tell the scheduler to pause a task/thread to prevent it from getting CPU time, meaning that it is
+frozen and will not be run (since its active flag is set to 0) until unfrozen. During this time,
+memory and register contents can be dumped (including disassemblies), stack traces can be 
+obtained, and more. 
+
+Note that register contents can be shown in real-time, but with limited granularity. Since the
+debugger and debugee execute one after the other, quickly switching, the debugger can look at the
+current register contents of the debugee by inspecting its task structure, but any number of 
+instructions could've elapsed since the last time . The only granularity is the preemption quantum
+
+You can also single step by copying the next instruction to be executed into your memory, executing it
+and then resuming
+Alternatively, the debugger can allow the program to continue in fullscreen 100% of the time while
+outputting to a serial port or additional display, and/or the debugger can assume fullscreen access
+whenever there's an exception.
+
+
+MORE ABOUT THE TERMINAL
+All higher-level I/O libraries that applications call are built on top of the TTY API, which is
+at the system call layer (i.e. the API functions issue system calls). The current TTY API emulates
+a standard 80x25 color VGA terminal, allowing you to change the text color, reposition the cursor,
+write characters, clear the screen, and more. 
+
+The way that input works with the TTY API is also quite simple. As stated earlier, the PS/2 driver
+is one of many processes on the machine. Whenever it is active, it polls the 8042 controller for
+any new data (i.e. a keyup or keydown event), placing any new data into a buffer.
+
+The physical/console terminal emulator is also one of many processes on the machine, responsible
+for reading the buffer from the PS/2 driver into its own.
+
+The TTY API also supports reading the keyboard at this low-level - system calls exist to look for
+any keypress events and read them if available. This allows a simple means of maintaining a map of
+which keys are pressed and which ones aren't.
+
+However, many terminal-based programs will desire a higher-level to interface with the keyboard.
+The getch() and kbhit() APIs sit just above this level, also being available. Traditional terminal
+programs worked by checking if a key was available and reading it if so, so this provides a similar
+interface (i.e. a stream of keys).
+
+APIs such as gets(), which serve to read full strings and use buffering are simply not available
+through the TTY API (they are part of the C runtime, which calls down to the TTY API, using the
+file descriptors explained below).
+
+One aspect common to the vast majority of terminals is the act of "echoing" pushed characters back
+to the terminal. In the era of physical terminals, the terminal itself (which was essentially just
+a keyboard and output device connected to a communications port) didn't display the character - it
+just sent it over the line, and the computer echoed it back, essentially as a diagnostic feature.
+
+This architecture is continued with this OS. The terminal emulator "sends" keypresses to the
+application, which can read them with getch(), for example (which is of course implemented on top
+of further low-level APIs, but that's irrelevant here). getch() does not echo characters back to
+the screen. However, an API such as gets(), when STDOUT is connected to the TTY, does.
 
 
 THE HEAP & THE STACK
@@ -196,3 +260,77 @@ will be caused, and the stack will then grow with the process allocating an addi
 
 The heap uses a linear memory block which will extend the heap as it grows by allocating more 
 pages, but freeing pages is a more complicated issue.
+
+The startup process is also important because it deals with file descriptors. In C, there are
+several predefined file descriptors that don't refer to "files" in the traditional sense, such as
+stdout and stdin. By default on a UNIX system, they are routed to the TTY device, but they can be
+piped to other devices if desired. 
+
+A similar function is provided here. By default, an application's stdout and stdin will refer to a
+VFS descriptor that is connected to the application's virtual terminal (which is in turn connected
+to the console driver when the application is foregrounded).
+
+Device 0 in the Virtual Filesystem exists to cope with these devices. Since it does deal with file
+paths, but is not a standard filesystem and does not interface with a block-level device driver,
+Device 0 has only a filesystem driver that does all of the work - no BLDD at all.
+
+In other words, Device 0 is designed to take any write operations to /stdout and write them to the
+terminal, and stdout by default points to /0/stdout. All of the "brains" are inside of the FS
+driver, though it obviously doesn't support all of the filesystem operations - many will fail.
+
+If an application pipes or reroutes stdout or stdin, it will simply change the file descriptor that
+the application's stdout points to in order to go to another file.
+
+This means that it is perfectly possible to write additional drivers for "filesystem-like" devices.
+While the OS filesystem is fully indexed, unlike the UNIX filesystem, it does still allow you to
+install additional devices that can act like files without actually being files.
+
+Say for example, that an application calls printf. printf is essentially equivalent to calling 
+fprintf with the target file descriptor as STDOUT, so now we're in fprintf. First, a buffer is 
+created to temporarily hold the characters that we're about to write. We then call sprintf with
+the format and arguments in order to generate the string that's about to be written, and we then
+call fputs(STDOUT, buf).
+
+fputs is essentially a wrapper for the VFS API call for fs_putbytes(STDOUT_FILE, buf, strlen(buf)).
+A system call is issued via an interrupt, and the VFS finds that in its internal table of file
+descriptors, STDOUT_FILE is file descriptor 0 (for example) in the table of the "virtual stdio
+device" driver (i.e. the FS driver for device 0).
+
+As stated before, the next move is for the calling application to send a message via the 
+interprocess communications scheme to the virtual stdio device driver process indicating that it
+wishes to perform a strlen(buf) bytes putbytes operation on file 0 of the bytes contained in buf,
+and then waits for a response.
+
+The virtual stdio device driver receives the message and then spins up a thread to respond to it,
+caching information about the request and the task ID of the application that sent it. Knowing that
+file 0 is STDOUT, it then decides to output this to the terminal (though in some cases, the 
+filesystem and driver may work together to implement some buffering, requiring either a newline or 
+manual flushing in order to display immediately). In any case, however, the putbytes request for
+buf is translated into a TTY puts call, though the driver uses some special system calls to "fake"
+being the caller, so that when the thread performs the system call into the TTY code, the 
+operation is performed on the callers' virtual terminal.
+
+The above may require some address space translation, but the general idea is there.
+
+A call like gets(buf) has similar considerations. gets(buf) is functionally equivalent to
+fgets(STDIN, buf), so that is what will be evaluated here. The C runtime eventually calls down to
+the VFS level with fs_getbytes(STDIN_FILE, buf, -1). A value of -1 is supplied because gets is a
+fundementally insecure C function. Unlike a call such as fread, where the number of bytes to be
+read is specified explicitly, gets simply reads until it receives a newline. As a result, -1 is 
+considered to be allowing fs_getbytes to read up to an "unlimited" number of bytes, though since
+the virtual stdio device driver is specially crafted, this is mitigated. As before, a message is
+sent to the driver, which realized that you are attempting to read from file 1.
+
+As such, the getbytes() request will be fulfilled by several TTY getch() calls in the context of
+the caller until a newline is received, meaning that gets (and indeed getch itself) is a blocking
+call that will force the caller to wait until data is done being received.
+
+Every character returned by getch() is echoed back by using the VFS to put a single byte into the 
+caller's STDOUT (wherever that may be routed).
+
+Please note that background applications (i.e. drivers, who flag themselves as such) do not get
+terminals, meaning that you cannot switch them into the foreground. However, there are foreground
+terminal programs that can establish an IPC connection to compatible background applications, who
+will send messages to the "listening" terminal app in order to print diagnostic text.
+
+There should be a delineation between kernel messages and user messages
