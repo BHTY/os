@@ -177,6 +177,7 @@ get_size:
 		shr bx, 9
 		cmp cx, 0
 		je get_size_exit
+	get_size_add_one:
 		inc bx
 
 	get_size_exit:
