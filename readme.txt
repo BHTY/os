@@ -336,7 +336,7 @@ will send messages to the "listening" terminal app in order to print diagnostic 
 the whole "faking a terminal operation" seems a little sketch, it would be nice if there's some 
 cleaner way to handle that inside of the calling context
 
-There should be a delineation between kernel messages and user messages?
+Messages can be sent both to tasks and to threads
 
 Similar to Microsoft Windows, the socket API, while based on BSD sockets, does not use file 
 descriptors to represent sockets (nor does it use file operations to operate on them). 
@@ -414,3 +414,16 @@ use console commands to control the arrangement of the terminals. Through variou
 shortcuts, they can float, or you can tile them. For example, you could tile three
 terminals into a 40x25 terminal on the right, 20x13 on the top-left, and 20x12 on the
 bottom left.
+
+
+
+NOTES
+Terminals don't give programs keyup/keydown events directly - they only work on 
+character input (getch()/kbhit()) and output (putch()) and functions that derive
+from those. Essentially, they are stream devices. To obtain lower-level control,
+an application can grab control of the keyboard directly. The PS/2 driver is 
+constantly polling, maintaining an input queue that applications (such as terminal
+emulators) can request/peek events from. Terminal emulators use IPC?
+
+Horizontally smaller terminals can use wordwrap or scrolling, while vertically 
+smaller terminals must scroll
